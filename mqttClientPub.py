@@ -104,8 +104,14 @@ while True:
     # text = raw_input("Message to send: ")
     # print text
     text = str(int(map(redbrightlvl,0,255,1023,0))) + "," +str(int(map(greenbrightlvl,0,255,1023,0)))+ ","+str(int(map(bluebrightlvl,0,255,1023,0)))
+    red = int(map(int(redbrightlvl),0,255,1023,0))
+    green = int(map(int(greenbrightlvl),0,255,1023,0))
+    blue = int(map(int(bluebrightlvl),0,255,1023,0))
+    client.publish("InterestingTopics/red", red);
+    client.publish("InterestingTopics/green", green);
+    client.publish("InterestingTopics/blue", blue);
     time.sleep(0.02)
-    client.publish("InterestingTopics/CurrentValue", text);
+    # client.publish("InterestingTopics/CurrentValue", text);
 
     if (transition == 1):
       redtoorange()

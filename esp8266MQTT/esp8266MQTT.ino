@@ -10,6 +10,26 @@ PubSubClient mqttClient("10.0.0.131", 1883, wifiClient);
 int pinGreen = 4;
 int pinBlue = 14;
 int pinRed = 12;
+int patternLength = 0;
+
+class color {
+  public:
+    int red;
+    int green;
+    int blue;
+    int transitionTime;
+    void printObj() {
+      Serial.print("red:");
+      Serial.print(red);
+      Serial.print(" - green:");
+      Serial.print(green);
+      Serial.print(" - blue:");
+      Serial.print(blue);
+      Serial.print(" - time:");
+      Serial.println(transitionTime);
+    }
+};
+color *list[] = {};
 
 void setup() 
 {
@@ -46,7 +66,7 @@ void connectToWiFiAndBroker()
   }
   Serial.println("Connected to broker!");
 
-  mqttClient.subscribe("InterestingTopics/#");
+  mqttClient.subscribe("colorPattern");
 }
 
 //savaing for use when sending data 
@@ -84,39 +104,53 @@ void callback(char* topic, byte* payload, unsigned int length)
 {
   Serial.println("Message received: ");
   Serial.println(topic);
-  char colorCommand[length+1];
+  char pattern[length+1];
   for (int i = 0; i < length; i++) 
   {
-    colorCommand[i] = (char)payload[i];
+    pattern[i] = (char)payload[i];
   }
-  colorCommand[length+1] = '\0';
-  splitAndSaveRGBValues(colorCommand);
-  updateRGBFromIncomingValues();
-}
-void splitAndSaveRGBValues(char *colorCommand) {
-  char *color;
-  color = strtok (colorCommand,",");
-  red = atoi(color);
-  int increment = 1;
-  while (color != NULL)
-  {
-    color = strtok (NULL, ",");
-    if (increment == 1) {
-      green = atoi(color);
-    } if (increment == 2) {
-      blue = atoi(color);
-    }
-    increment ++;
-  }
+  pattern[length+1] = '\0';
+  splitPatternTicks(pattern);
 }
 
+void splitPatternTicks(char *pattern) {
+  char *colorsAtTick;
+  colorsAtTick= strtok (pattern,";");
+  while (colorsAtTick != NULL)
+  {
+    parseTickValues(colorsAtTick, patternLength);
+    patternLength ++;
+    colorsAtTick = strtok (NULL,";");
+  }
+  for (int i = 0; i < patternLength; i ++) {
+    list[i] -> printObj();
+  }
+}
+void parseTickValues(char *tick, int patternIndex) {
+  char *value;
+  color TickObj;
+  //red green blue time seperated by ","
+  for (int i = 0; i < 4; i ++) {
+    value = strtok (tick,",");
+    if (i == 0) {
+      TickObj.red = atoi(value);
+    } else if (i == 1) {
+      TickObj.green = atoi(value);
+    } else if (i == 2) {
+      TickObj.blue = atoi(value);
+    } else if (i == 3) {
+      TickObj.transitionTime = atoi(value);
+    }
+  }
+  //add color obj to the list
+  list[patternIndex] = &TickObj;
+}
+
+
+
+
+
 void updateRGBFromIncomingValues() {
-  Serial.print("red:");
-  Serial.print(red);
-  Serial.print(" - green:");
-  Serial.print(green);
-  Serial.print(" - blue:");
-  Serial.println(blue);
   digitalWrite(pinRed, red);
   digitalWrite(pinGreen, green);
   digitalWrite(pinBlue, blue);

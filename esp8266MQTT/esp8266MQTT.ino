@@ -131,13 +131,17 @@ void loop()
         //colorsAtTickArray ex. "255,0,0,1000"
         Serial.println("trying to parse values, sending ->");
         Serial.println(colorsAtTickArray[i]);
-        parseTickValues(colorsAtTickArray[i]);
-//        list[i].printObj();
+        parseTickValues(colorsAtTickArray[i], i, list);
       }
+//      Serial.print("LIST 0???: ");
+//      Serial.println(list[0].red);
+//      Serial.println(list[0].green);
+//      Serial.println(list[0].blue);
+//      Serial.println(list[0].transitionTime);
       patternListObjects = list;
       shouldRunPattern = true;
     }
-void parseTickValues(char *tick) {
+void parseTickValues(char *tick, int patternIndex, color *list) {
   char *value;
   color TickObj;
   //red green blue time seperated by ","
@@ -154,10 +158,11 @@ void parseTickValues(char *tick) {
     }
     value = strtok (NULL, ",");
   }
-  Serial.println("tick obj red: ");
-  Serial.println(TickObj.red);
+  
   //add color obj to the list
-//  list[patternIndex] = TickObj;
+  list[patternIndex] = TickObj;
+  Serial.println("tick obj red: ");
+  Serial.println(list[patternIndex].red);
 }
 
 

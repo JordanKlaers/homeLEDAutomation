@@ -35,6 +35,8 @@ class color {
     }
 };
 
+color *patternListObjects;
+bool shouldRunPattern = false;
 
 void setup() 
 {
@@ -81,10 +83,23 @@ void loop()
     connectToWiFiAndBroker();
   }
   mqttClient.loop();
+  if (shouldRunPattern) {
+    Serial.println("in running pattern loop: ");
+    for (int i = 0; i < patternLength; i ++) {
+      Serial.print("Index: ");
+      Serial.println(i);
+      Serial.println(patternListObjects[i].red);
+      //.printObj();
+    }
+    Serial.println(" ");
+    Serial.println(" ");
+    delay(10000);
+  }
 }
     
     void callback(char* topic, byte* payload, unsigned int length) 
     {
+      shouldRunPattern = false;
       //save payload bytes into char
       int ticks = 1;
       char pattern[length+1];
@@ -119,6 +134,8 @@ void loop()
         parseTickValues(colorsAtTickArray[i]);
 //        list[i].printObj();
       }
+      patternListObjects = list;
+      shouldRunPattern = true;
     }
 void parseTickValues(char *tick) {
   char *value;

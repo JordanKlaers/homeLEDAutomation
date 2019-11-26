@@ -10,6 +10,11 @@ PubSubClient mqttClient("10.0.0.131", 1883, wifiClient);
 int pinGreen = 4;
 int pinBlue = 14;
 int pinRed = 12;
+
+int red;
+int green;
+int blue;
+
 int patternLength = 0;
 
 class color {
@@ -29,7 +34,7 @@ class color {
       Serial.println(transitionTime);
     }
 };
-color *list[] = {};
+
 
 void setup() 
 {
@@ -69,69 +74,58 @@ void connectToWiFiAndBroker()
   mqttClient.subscribe("colorPattern");
 }
 
-//savaing for use when sending data 
-
-//#define MILLISEC_DELAY_BETWEEN_PUBLISH 10000
-//unsigned long lastTime = 0;
-//unsigned long currentValue = 1;
-//char msg[50];
-
 void loop() 
 {
   if (!mqttClient.connected()) 
   {
     connectToWiFiAndBroker();
   }
-
   mqttClient.loop();
-  //Savaing as a refernce for how to send data
-  
-  //  if(millis() - lastTime > MILLISEC_DELAY_BETWEEN_PUBLISH) 
-  //  {
-  //    lastTime = millis();
-  //    Serial.println("Publishing a new value");
-  //    snprintf (msg, 75, "%ld", currentValue);
-  //    Serial.println(currentValue);
-  //    mqttClient.publish("ESP8266/CurrentValue", msg);
-  //    currentValue++;
-  //  }
 }
-int red;
-int green;
-int blue;
-
-void callback(char* topic, byte* payload, unsigned int length) 
-{
-  Serial.println("Message received: ");
-  Serial.println(topic);
-  char pattern[length+1];
-  for (int i = 0; i < length; i++) 
-  {
-    pattern[i] = (char)payload[i];
-  }
-  pattern[length+1] = '\0';
-  splitPatternTicks(pattern);
-}
-
-void splitPatternTicks(char *pattern) {
-  char *colorsAtTick;
-  colorsAtTick= strtok (pattern,";");
-  while (colorsAtTick != NULL)
-  {
-    parseTickValues(colorsAtTick, patternLength);
-    patternLength ++;
-    colorsAtTick = strtok (NULL,";");
-  }
-  for (int i = 0; i < patternLength; i ++) {
-    list[i] -> printObj();
-  }
-}
-void parseTickValues(char *tick, int patternIndex) {
+    
+    void callback(char* topic, byte* payload, unsigned int length) 
+    {
+      //save payload bytes into char
+      int ticks = 1;
+      char pattern[length+1];
+      for (int i = 0; i < length; i++) 
+      {
+        pattern[i] = (char)payload[i];
+      }
+      pattern[length+1] = '\0';
+//      Serial.print("this is the whole pattern: ");
+//      Serial.println(pattern);
+      splitPatternTicks(pattern, ticks);
+    }
+    
+    void splitPatternTicks(char *pattern, int ticks) {
+      char *colorsAtTick;
+      char *colorsAtTickArray[ticks];
+      //split pattern on ";" into chars
+      colorsAtTick = strtok (pattern,";");
+      while (colorsAtTick != NULL)
+      {
+        //save the chars into an array
+        colorsAtTickArray[patternLength] = colorsAtTick;
+        patternLength ++;
+        colorsAtTick = strtok (NULL,";");
+      }
+      color list[patternLength];// = {};
+      for (int i = 0; i < patternLength-1; i ++) {
+        //loop over the array of char to further split and save values
+        //colorsAtTickArray ex. "255,0,0,1000"
+        Serial.println("trying to parse values, sending ->");
+        Serial.println(colorsAtTickArray[i]);
+        parseTickValues(colorsAtTickArray[i]);
+//        list[i].printObj();
+      }
+    }
+void parseTickValues(char *tick) {
   char *value;
   color TickObj;
   //red green blue time seperated by ","
+  value = strtok (tick,",");
   for (int i = 0; i < 4; i ++) {
-    value = strtok (tick,",");
     if (i == 0) {
       TickObj.red = atoi(value);
     } else if (i == 1) {
@@ -141,12 +135,13 @@ void parseTickValues(char *tick, int patternIndex) {
     } else if (i == 3) {
       TickObj.transitionTime = atoi(value);
     }
+    value = strtok (NULL, ",");
   }
+  Serial.println("tick obj red: ");
+  Serial.println(TickObj.red);
   //add color obj to the list
-  list[patternIndex] = &TickObj;
+//  list[patternIndex] = TickObj;
 }
-
-
 
 
 

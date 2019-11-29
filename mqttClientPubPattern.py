@@ -15,12 +15,33 @@ def map(x,in_min,in_max,out_min,out_max):
 
 
 text = raw_input("enter anything to send the pattern: ")
+red = str(map(255,0,255,1024,0)) + "," + str(map(0,0,255,1024,0)) + ","+str(map(0,0,255,1024,0)) + ",1000;"
+green = str(map(0,0,255,1024,0)) + "," + str(map(255,0,255,1024,0)) + ","+str(map(0,0,255,1024,0)) + ",1000;"
+blue = str(map(0,0,255,1024,0)) + "," + str(map(0,0,255,1024,0)) + ","+str(map(255,0,255,1024,0)) + ",1000;"
+off = str(map(0,0,255,1024,0)) + "," + str(map(0,0,255,1024,0)) + ","+str(map(0,0,255,1024,0)) + ",1000;"
+# pattern = off
 
-pattern = str(map(255,0,255,1023,0)) + "," + str(map(0,0,255,1023,0)) + ","+str(map(0,0,255,1023,0)) + ",1000;"
-pattern += str(map(255,0,255,1023,0)) + "," + str(map(255,0,255,1023,0)) + ","+str(map(0,0,255,1023,0)) + ",1000;"
-pattern += str(map(0,0,255,1023,0)) + "," + str(map(255,0,255,1023,0)) + ","+str(map(255,0,255,1023,0)) + ",1000;"
-pattern += str(map(0,0,255,1023,0)) + "," + str(map(0,0,255,1023,0)) + ","+str(map(255,0,255,1023,0)) + ",1000;"
-pattern += str(map(255,0,255,1023,0)) + "," + str(map(0,0,255,1023,0)) + ","+str(map(255,0,255,1023,0)) + ",1000"
+pattern = blue
+pattern += off
+pattern += blue
+pattern += off
+pattern += blue
+pattern += off
+
+pattern += green
+pattern += off
+pattern += green
+pattern += off
+# pattern += green
+# pattern += off
+
+# pattern += red
+# pattern += off
+# pattern += red
+# pattern += off
+# pattern += red
+# pattern += off
+
 print pattern
 client.publish("colorPattern", pattern);
 

@@ -1,42 +1,38 @@
+#include <sstream>
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
-
+using namespace std;
 
 #define CLIENT_NAME "ESP8266_1" // just a name to identify this client
 WiFiClient wifiClient;
 PubSubClient mqttClient("10.0.0.131", 1883, wifiClient);
+using std::vector;
+using std::istream;
+using std::ostream;
+using std::istringstream;
 
 //set rgb led pins
 int pinGreen = 4;
 int pinBlue = 14;
 int pinRed = 12;
 
-int red;
-int green;
-int blue;
+int currentRed = 0;
+int currentGreen = 0;
+int currentBlue = 0;
 
-int patternLength = 0;
-
-class color {
+int patternIndex = 0;
+int startTime;
+class color
+{
   public:
     int red;
     int green;
     int blue;
     int transitionTime;
-    void printObj() {
-      Serial.print("red:");
-      Serial.print(red);
-      Serial.print(" - green:");
-      Serial.print(green);
-      Serial.print(" - blue:");
-      Serial.print(blue);
-      Serial.print(" - time:");
-      Serial.println(transitionTime);
-    }
+    istream &readStringData(istream &is);
 };
+vector<color> vec;
 
-color *patternListObjects;
-bool shouldRunPattern = false;
 
 void setup() 
 {
@@ -83,92 +79,89 @@ void loop()
     connectToWiFiAndBroker();
   }
   mqttClient.loop();
-  if (shouldRunPattern) {
-    Serial.println("in running pattern loop: ");
-    for (int i = 0; i < patternLength; i ++) {
-      Serial.print("Index: ");
-      Serial.println(i);
-      Serial.println(patternListObjects[i].red);
-      //.printObj();
-    }
-    Serial.println(" ");
-    Serial.println(" ");
-    delay(10000);
+
+  if (vec.size() > 0) {
+    runPattern();
   }
 }
     
-    void callback(char* topic, byte* payload, unsigned int length) 
-    {
-      shouldRunPattern = false;
-      //save payload bytes into char
-      int ticks = 1;
-      char pattern[length+1];
-      for (int i = 0; i < length; i++) 
-      {
-        pattern[i] = (char)payload[i];
-      }
-      pattern[length+1] = '\0';
-//      Serial.print("this is the whole pattern: ");
-//      Serial.println(pattern);
-      splitPatternTicks(pattern, ticks);
-    }
-    
-    void splitPatternTicks(char *pattern, int ticks) {
-      char *colorsAtTick;
-      char *colorsAtTickArray[ticks];
-      //split pattern on ";" into chars
-      colorsAtTick = strtok (pattern,";");
-      while (colorsAtTick != NULL)
-      {
-        //save the chars into an array
-        colorsAtTickArray[patternLength] = colorsAtTick;
-        patternLength ++;
-        colorsAtTick = strtok (NULL,";");
-      }
-      color list[patternLength];// = {};
-      for (int i = 0; i < patternLength-1; i ++) {
-        //loop over the array of char to further split and save values
-        //colorsAtTickArray ex. "255,0,0,1000"
-        Serial.println("trying to parse values, sending ->");
-        Serial.println(colorsAtTickArray[i]);
-        parseTickValues(colorsAtTickArray[i], i, list);
-      }
-//      Serial.print("LIST 0???: ");
-//      Serial.println(list[0].red);
-//      Serial.println(list[0].green);
-//      Serial.println(list[0].blue);
-//      Serial.println(list[0].transitionTime);
-      patternListObjects = list;
-      shouldRunPattern = true;
-    }
-void parseTickValues(char *tick, int patternIndex, color *list) {
-  char *value;
-  color TickObj;
-  //red green blue time seperated by ","
-  value = strtok (tick,",");
-  for (int i = 0; i < 4; i ++) {
-    if (i == 0) {
-      TickObj.red = atoi(value);
-    } else if (i == 1) {
-      TickObj.green = atoi(value);
-    } else if (i == 2) {
-      TickObj.blue = atoi(value);
-    } else if (i == 3) {
-      TickObj.transitionTime = atoi(value);
-    }
-    value = strtok (NULL, ",");
+void callback(char* topic, byte* payload, unsigned int length) 
+{
+  Serial.println( "VALUE ARRIVED");
+  char pattern[length+1];
+  for (int i = 0; i < length; i++) 
+  {
+    pattern[i] = (char)payload[i];
   }
+  pattern[length+1] = '\0';
+  vec.clear();
+  parsePattern(pattern);
+}
+
+istream &
+color::readStringData(istream &is)
+{
+  char comma1, comma2, comma3;
+  is >> red >> comma1 >> green >> comma2 >> blue >> comma3 >> transitionTime;
+  if (!(comma1== ',' && comma2 == ',' && comma3 == ',')) {
+    // indicate that the conversion failed
+    is.setstate(is.rdstate() | std::ios::failbit);
+  }
+  return is;
+}
+
+
+
+void parsePattern(char *pattern) {
+  istringstream strm(pattern);
   
-  //add color obj to the list
-  list[patternIndex] = TickObj;
-  Serial.println("tick obj red: ");
-  Serial.println(list[patternIndex].red);
+  color c;
+  while (c.readStringData(strm)) {
+    char ch;
+    vec.push_back(c);
+    strm >> ch;   // read the semicolon
+  }
+  patternIndex = 0;
+  startTime = millis();
+  Serial.println("parsed");
+  Serial.println(vec.size());
 }
 
+void runPattern() {
+  int nextIndex;
+  if ((patternIndex + 1) == vec.size()) {
+    nextIndex = 0;
+  } else {
+    nextIndex = patternIndex + 1;
+  }
+  int diffTime = millis() - startTime;
+  if (diffTime < vec[patternIndex].transitionTime) {
+    int percentage = (diffTime * 10000) / vec[patternIndex].transitionTime;
 
-
-void updateRGBFromIncomingValues() {
-  digitalWrite(pinRed, red);
-  digitalWrite(pinGreen, green);
-  digitalWrite(pinBlue, blue);
+    //current is equal to the current value + a percentage of the difference to the next color;
+    currentRed = vec[patternIndex].red + (((vec[nextIndex].red - vec[patternIndex].red) * percentage) / 10000);
+    currentGreen = vec[patternIndex].green + (((vec[nextIndex].green - vec[patternIndex].green) * percentage) / 10000);
+    currentBlue = vec[patternIndex].blue + (((vec[nextIndex].blue - vec[patternIndex].blue) * percentage) / 10000);
+  } else {
+    currentRed = vec[nextIndex].red;
+    currentGreen = vec[nextIndex].green;
+    currentBlue = vec[nextIndex].blue;
+//    Serial.print("index :");
+//    Serial.print(nextIndex);
+//    Serial.print("  red: ");
+//    Serial.print(currentRed);
+//    Serial.print("  green: ");
+//    Serial.print(currentGreen);
+//    Serial.print("  blue: ");
+//    Serial.println(currentBlue);
+    startTime = millis();
+    if ((patternIndex + 1) == vec.size()) {
+      patternIndex = 0;
+    } else {
+      patternIndex = patternIndex + 1;
+    }
+  }
+  analogWrite(pinRed, currentRed);
+  analogWrite(pinGreen, currentGreen);
+  analogWrite(pinBlue, currentBlue);
 }

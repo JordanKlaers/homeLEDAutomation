@@ -19,31 +19,25 @@ red = str(map(255,0,255,1024,0)) + "," + str(map(0,0,255,1024,0)) + ","+str(map(
 green = str(map(0,0,255,1024,0)) + "," + str(map(255,0,255,1024,0)) + ","+str(map(0,0,255,1024,0)) + ",1000;"
 blue = str(map(0,0,255,1024,0)) + "," + str(map(0,0,255,1024,0)) + ","+str(map(255,0,255,1024,0)) + ",1000;"
 off = str(map(0,0,255,1024,0)) + "," + str(map(0,0,255,1024,0)) + ","+str(map(0,0,255,1024,0)) + ",1000;"
-# pattern = off
 
-pattern = blue
-pattern += off
-pattern += blue
-pattern += off
-pattern += blue
-pattern += off
-
-pattern += green
-pattern += off
-pattern += green
-pattern += off
-# pattern += green
-# pattern += off
-
-# pattern += red
-# pattern += off
-# pattern += red
-# pattern += off
-# pattern += red
-# pattern += off
-
-print pattern
-client.publish("colorPattern", pattern);
+pattern = [red, off, red, off, green, off ,green, off, blue, off, blue, off, green, blue, red]
+print len(pattern)
+send = ""
+client.publish("colorPattern/start", "0");
+time.sleep(0.5)
+for x in pattern:
+  if len(send + x) < 125:
+    print("adding:", x)
+    send = send + x
+  else:
+    print("\n")
+    client.publish("colorPattern", send);
+    print("sent")
+    time.sleep(0.5)
+    send = x
+client.publish("colorPattern", send);
+print(off)
+client.publish("colorPattern/end", off);
 
 
 

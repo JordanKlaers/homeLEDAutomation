@@ -70,6 +70,8 @@ void connectToWiFiAndBroker()
   Serial.println("Connected to broker!");
 
   mqttClient.subscribe("colorPattern");
+  mqttClient.subscribe("colorPattern/start");
+  mqttClient.subscribe("colorPattern/end");
 }
 
 void loop() 
@@ -87,15 +89,27 @@ void loop()
     
 void callback(char* topic, byte* payload, unsigned int length) 
 {
-  Serial.println( "VALUE ARRIVED");
-  char pattern[length+1];
-  for (int i = 0; i < length; i++) 
-  {
-    pattern[i] = (char)payload[i];
+  Serial.print("-inc-");
+  bool isEnd = false;
+  if (strcmp(topic, "colorPattern/start") == 0) {
+    vec.clear();
+    Serial.println("cleared");
+  } else {
+    if (strcmp(topic, "colorPattern/end") == 0) {
+      isEnd = true;
+      Serial.println("end pattern");
+    } else {
+      Serial.println("regular pattern");
+    }
+    char pattern[length+1];
+    for (int i = 0; i < length; i++) 
+    {
+      pattern[i] = (char)payload[i];
+    }
+    pattern[length+1] = '\0';
+    parsePattern(pattern, isEnd);
   }
-  pattern[length+1] = '\0';
-  vec.clear();
-  parsePattern(pattern);
+  
 }
 
 istream &
@@ -112,7 +126,7 @@ color::readStringData(istream &is)
 
 
 
-void parsePattern(char *pattern) {
+void parsePattern(char *pattern, bool isEnd) {
   istringstream strm(pattern);
   
   color c;
@@ -121,10 +135,13 @@ void parsePattern(char *pattern) {
     vec.push_back(c);
     strm >> ch;   // read the semicolon
   }
-  patternIndex = 0;
-  startTime = millis();
-  Serial.println("parsed");
+  Serial.println("parsed one chunk");
   Serial.println(vec.size());
+  if (isEnd == true) {
+    patternIndex = 0;
+    startTime = millis();
+      
+  }
 }
 
 void runPattern() {
@@ -146,14 +163,6 @@ void runPattern() {
     currentRed = vec[nextIndex].red;
     currentGreen = vec[nextIndex].green;
     currentBlue = vec[nextIndex].blue;
-//    Serial.print("index :");
-//    Serial.print(nextIndex);
-//    Serial.print("  red: ");
-//    Serial.print(currentRed);
-//    Serial.print("  green: ");
-//    Serial.print(currentGreen);
-//    Serial.print("  blue: ");
-//    Serial.println(currentBlue);
     startTime = millis();
     if ((patternIndex + 1) == vec.size()) {
       patternIndex = 0;
